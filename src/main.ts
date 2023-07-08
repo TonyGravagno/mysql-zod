@@ -125,14 +125,37 @@ export async function generate(config: Config) {
     });
   }
   
+  const tableNameModifications = config.modify;
   for (let table of tables) {
     const d = await db.raw(`DESC ${table}`)
     const describes = d[0] as Desc[]
+
+    let typeName = table
+    if (tableNameModifications && tableNameModifications.length) {
+      typeName = tableNameModifications.reduce(
+        (modified,currentFromTo) => {
+          const isPatternFrom =
+            currentFromTo[0].startsWith("/") &&
+            currentFromTo[0].endsWith("/");
+          if(isPatternFrom) {
+            const fromPattern = currentFromTo[0].substring(1, currentFromTo[0].length - 1);
+            if (null !== modified.match(fromPattern)) {
+              modified = modified.replace(new RegExp(fromPattern),currentFromTo[1])
+            }
+          } else {
+            modified = modified.replace(currentFromTo[0],currentFromTo[1])
+          }
+          return modified
+        },
+        typeName
+      )  
+    };
+
     if (isCamelCase)
-      table = camelCase(table)
+      typeName = camelCase(typeName)
     let content = `import z from 'zod'
 
-export const ${table} = z.object({`
+export const ${typeName} = z.object({`
     for (const desc of describes) {
       const field = isCamelCase ? camelCase(desc.Field) : desc.Field
       const type = getType(desc.Type, desc.Null, config)
@@ -142,10 +165,10 @@ export const ${table} = z.object({`
     content = `${content}
 })
 
-export type ${camelCase(`${table}Type`)} = z.infer<typeof ${table}>
+export type ${camelCase(`${typeName}Type`)} = z.infer<typeof ${typeName}>
 `
     const dir  = (config.folder && config.folder !== '') ? config.folder : '.'
-    const file = (config.suffix && config.suffix !== '') ? `${table}.${config.suffix}.ts` : `${table}.ts`
+    const file = (config.suffix && config.suffix !== '') ? `${typeName}.${config.suffix}.ts` : `${typeName}.ts`
     const dest = path.join(dir, file)
     console.log('Created:', dest)
     fs.outputFileSync(dest, content)
@@ -172,4 +195,5 @@ export interface Config {
   camelCase?: boolean
   nullish?: boolean
   requiredString?: boolean
+  modify?: string[][]
 }
