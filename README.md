@@ -89,7 +89,15 @@ await generate({
   "suffix": "table",
   "camelCase": false,
   "nullish": false,
-  "requiredString": false
+  "requiredString": false,
+  "modify" : [
+    ["/_site_/","_Location_"],
+    ["/^np1_/",""],
+    ["/^x(.*)/","$1_Xref"],
+    ["/^wp/",""],
+    ["geo","_Geo"],
+    ["entity","_Entity"],
+  ]
 }
 ```
 
@@ -102,3 +110,4 @@ await generate({
 | camelCase | Convert all table names and their properties to camelcase. (eg: `profile_picture` becomes `profilePicture`) |
 | nullish | Set schema as `nullish` instead of `nullable` |
 | requiredString | Add `min(1)` for string schema |
+| modify | Array of substitution pairs for type name. Each pair in this array represents a _From/To_ replacement for the table name. The result will be the new type name and the filename prefix. If the _From_ value begins and ends with "/", it will be processed as a regular expression. The _To_ values do not need slashes. See above for examples. This can be used, for example, to identify words for camelCasing, and to version file and type names.
