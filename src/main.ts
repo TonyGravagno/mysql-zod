@@ -72,9 +72,37 @@ export async function generate(config: Config) {
   const t = await db.raw('SELECT table_name as table_name FROM information_schema.tables WHERE table_schema = ?', [config.database])
   let tables = t[0].map((row: any) => row.table_name).filter((table: string) => !table.startsWith('knex_')).sort() as Tables
 
-  const includedTables = config.tables
-  if (includedTables && includedTables.length)
-    tables = tables.filter(table => includedTables.includes(table))
+  const allIncludedTables = config.tables;
+  console.dir(allIncludedTables)
+  const includedTablesRegex = allIncludedTables?.filter((includeString) => {
+    const isPattern =
+    includeString.startsWith("/") && includeString.endsWith("/");
+    
+  console.dir(`${includeString} ${isPattern}`)
+      return isPattern;
+  });
+  const includedTableNames = allIncludedTables?.filter(
+    (table) => includedTablesRegex?.includes(table)
+  );
+  console.dir(includedTableNames)
+
+  if (includedTableNames && includedTableNames.length) {
+    tables = tables.filter((table) => {
+      if (includedTableNames.includes(table))
+        return true
+      if (includedTablesRegex && includedTablesRegex.length) {
+        let useTable = false;
+        includedTablesRegex.forEach((text) => {
+          const pattern = text.substring(1, text.length - 1);
+          if (null !== table.match(pattern)) {
+            useTable = true;
+          }
+        })
+        return useTable;
+      }
+    })
+  }
+  console.dir(tables)
 
   const allIgnoredTables = config.ignore;
   const ignoredTablesRegex = allIgnoredTables?.filter((ignoreString) => {

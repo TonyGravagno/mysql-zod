@@ -83,7 +83,7 @@ await generate({
   "user": "root",
   "password": "secret",
   "database": "myapp",
-  "tables": ["user", "log"],
+  "tables": ["user", "log", "/^prod(1|2)_/"],
   "ignore": ["log","/^temp/"],
   "folder": "@zod",
   "suffix": "table",
@@ -95,7 +95,7 @@ await generate({
 
 | Option | Description |
 | ------ | ----------- |
-| tables | Filter the tables to include only those specified. |
+| tables | Filter the tables to include only those specified. If a table name begins and ends with "/", it will be processed as a regular expression. |
 | ignore | Filter the tables to exclude those specified. If a table name begins and ends with "/", it will be processed as a regular expression. |
 | folder | Specify the output directory. |
 | suffix | Suffix to the name of a generated file. (eg: `user.table.ts`) |
