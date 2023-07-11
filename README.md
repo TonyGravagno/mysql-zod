@@ -87,7 +87,7 @@ await generate({
   "ignore": ["log","/^temp/"],
   "folder": "@zod",
   "suffix": "table",
-  "camelCase": false,
+  "camelCase": {"pascalCase": true},
   "nullish": false,
   "requiredString": false,
   "modify" : [
@@ -107,7 +107,7 @@ await generate({
 | ignore | Filter the tables to exclude those specified. If a table name begins and ends with "/", it will be processed as a regular expression. |
 | folder | Specify the output directory. |
 | suffix | Suffix to the name of a generated file. (eg: `user.table.ts`) |
-| camelCase | Convert all table names and their properties to camelcase. (eg: `profile_picture` becomes `profilePicture`) |
+| camelCase | Convert all table names and their properties to camelcase. (eg: `profile_picture` becomes `profilePicture`) The value of this option may be a simple Boolean true/false to enable/disable default camel casing. If the value is an object for the camelCase feature, the object will be passed as Options to camelCase. Valid Options object properties are "pascalCase", "preserveConsecutiveUppercase", and "locale". For example, with `{"pascalCase":true}`, a table name becomes `ProfilePicture`. See [GitHub](https://github.com/sindresorhus/camelcase) for details. |
 | nullish | Set schema as `nullish` instead of `nullable` |
 | requiredString | Add `min(1)` for string schema |
 | modify | Array of substitution pairs for type name. Each pair in this array represents a _From/To_ replacement for the table name. The result will be the new type name and the filename prefix. If the _From_ value begins and ends with "/", it will be processed as a regular expression. The _To_ values do not need slashes. See above for examples. This can be used, for example, to identify words for camelCasing, and to version file and type names.

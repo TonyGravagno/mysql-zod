@@ -5,7 +5,7 @@
 import path from 'node:path'
 import fs from 'fs-extra'
 import knex from 'knex'
-import camelCase from 'camelcase'
+import camelCase, {Options as camelCaseOptions} from 'camelcase'
 
 function getType(descType: Desc['Type'], descNull: Desc['Null'], config: Config) {
   const isNullish        = config.nullish && config.nullish               === true
@@ -67,7 +67,13 @@ export async function generate(config: Config) {
     },
   })
 
-  const isCamelCase = config.camelCase && config.camelCase === true
+  const isCamelCase = config.camelCase !== undefined && config.camelCase !== false // object or true = true
+
+  const camelCaseText = (text : string) => {
+    if(!isCamelCase)
+      return text
+    return camelCase(text,typeof config.camelCase !== "boolean" ? config.camelCase : undefined)
+  }
 
   const t = await db.raw('SELECT table_name as table_name FROM information_schema.tables WHERE table_schema = ?', [config.database])
   let tables = t[0].map((row: any) => row.table_name).filter((table: string) => !table.startsWith('knex_')).sort() as Tables
@@ -151,13 +157,12 @@ export async function generate(config: Config) {
       )  
     };
 
-    if (isCamelCase)
-      typeName = camelCase(typeName)
+    typeName = camelCaseText(typeName)
     let content = `import z from 'zod'
 
 export const ${typeName} = z.object({`
     for (const desc of describes) {
-      const field = isCamelCase ? camelCase(desc.Field) : desc.Field
+      const field = isCamelCase ? camelCase(desc.Field) : desc.Field // still camelCased, not PascalCased
       const type = getType(desc.Type, desc.Null, config)
       content = `${content}
   ${field}: ${type},`
@@ -165,7 +170,7 @@ export const ${typeName} = z.object({`
     content = `${content}
 })
 
-export type ${camelCase(`${typeName}Type`)} = z.infer<typeof ${typeName}>
+export type ${camelCaseText(`${typeName}Type`)} = z.infer<typeof ${typeName}>
 `
     const dir  = (config.folder && config.folder !== '') ? config.folder : '.'
     const file = (config.suffix && config.suffix !== '') ? `${typeName}.${config.suffix}.ts` : `${typeName}.ts`
@@ -175,6 +180,8 @@ export type ${camelCase(`${typeName}Type`)} = z.infer<typeof ${typeName}>
   }
   await db.destroy()
 }
+
+
 
 type Tables = string[]
 interface Desc {
@@ -192,7 +199,7 @@ export interface Config {
   ignore?: string[]
   folder?: string
   suffix?: string
-  camelCase?: boolean
+  camelCase?: boolean | camelCaseOptions
   nullish?: boolean
   requiredString?: boolean
   modify?: string[][]
