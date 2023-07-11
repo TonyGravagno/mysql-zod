@@ -84,19 +84,18 @@ await generate({
   "password": "secret",
   "database": "myapp",
   "tables": ["user", "log", "/^prod(1|2)_/"],
-  "ignore": ["log","/^temp/"],
+  "ignore": ["log", "/^temp/"],
   "folder": "@zod",
   "suffix": "table",
   "camelCase": false,
   "nullish": false,
   "requiredString": false,
-  "modify" : [
-    ["/_site_/","_Location_"],
-    ["/^np1_/",""],
-    ["/^x(.*)/","$1_Xref"],
-    ["/^wp/",""],
-    ["geo","_Geo"],
-    ["entity","_Entity"],
+  "modify": [
+    ["/_site_/", "_location_"],
+    ["/^x(.*)/", "$1_Xref"],
+    ["/^wp/", ""],
+    ["comms", "_comms_"],
+    ["entity", "_entity"]
   ]
 }
 ```
