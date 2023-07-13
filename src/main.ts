@@ -9,21 +9,116 @@ import type { Options as camelCaseOptions } from 'camelcase'
 import camelCase from 'camelcase'
 
 function getType(descType: Desc['Type'], descNull: Desc['Null'], config: Config) {
-  const isNullish        = config.nullish && config.nullish               === true
+  const isNullish = config.nullish && config.nullish === true
   const isRequiredString = config.requiredString && config.requiredString === true
-  const type             = descType.split('(')[0].split(' ')[0]
-  const isNull           = descNull === 'YES'
-  const string           = ['z.string()']
-  const number           = ['z.number()']
-  const nullable         = isNullish ? 'nullish()' : 'nullable()'
-  const nonnegative      = 'nonnegative()'
-  const min1             = 'min(1)'
+  const type = descType.split('(')[0].split(' ')[0]
+  const isNull = descNull === 'YES'
+  const string = ['z.string()']
+  const number = ['z.number()']
+  const date = ['z']
+  const nullable = isNullish ? 'nullish()' : 'nullable()'
+  const nonnegative = 'nonnegative()'
+  const min1 = 'min(1)'
+  let useDate = (config.datetime?.useDate && config.datetime.useDate) || false
+  let useIso = (config.datetime?.useIso && config.datetime.useIso) || false
+  if (useDate && useIso) {
+    useDate = false
+    useIso = false
+  }
+  const dateCoerce = useDate && (config.datetime?.coerce || false)
+  const minDate = (useDate && config.datetime?.minDate) || undefined
+  const maxDate = (useDate && config.datetime?.maxDate) || undefined
+  const dateIsoOffset = useIso && (config.datetime?.offset || false)
+  const dateIsoPrecision = useIso && config.datetime?.precision &&
+    config.datetime.precision >= 0 && config.datetime.precision <= 6 ? config.datetime.precision : undefined
+
+
+
+  const dateAsZodDate = (type: string): string => {
+    if (!useDate)
+      return ''
+    if (dateCoerce) {
+      date.push('coerce')
+    }
+    date.push('date()')
+
+    if (minDate !== undefined) {
+      date.push(`min(new Date('${minDate}'))`)
+    }
+    if (maxDate !== undefined) {
+      date.push(`max(new Date('${maxDate}'))`)
+    }
+    return date.join('.')
+  }
+
+  const generateDate = (type: string): string => {
+    
+    if (dateCoerce) {
+      date.push('coerce')
+    }
+    if (useDate)
+      return dateAsZodDate(type)
+
+    return string.join('.') // default string with no date params
+  }
+
+  const generateDateTime = (type: string): string => {
+    const dateIsoOptions: string[] = []
+    // return value might be z.coerce.date(), z.date() or z.string().datetime()
+
+    if (useDate)
+      return generateDate(type)
+
+    if (useIso) {
+      let optionsString = ''
+      if (dateIsoOffset)
+        dateIsoOptions.push(`offset: ${dateIsoOffset}`)
+      if (dateIsoPrecision !== undefined)
+        dateIsoOptions.push(`precision: ${dateIsoPrecision}`)
+      if (dateIsoOptions.length > 0)
+        optionsString = `{${dateIsoOptions.join(',')}}`
+
+      string.push(`datetime(${optionsString})`)
+      return string.join('.')
+    }
+
+    return string.join('.') // default string with no date params
+  }
+
+  const generateYear = (type: string): string => {
+    const dateIsoOptions: string[] = []
+    // return value might be z.coerce.date(), z.date() or z.string().datetime()
+
+    if (useDate)
+      return generateDate(type)
+
+    if (useIso) {
+      let optionsString = ''
+      if (dateIsoOffset)
+        dateIsoOptions.push(`offset: ${dateIsoOffset}`)
+      if (dateIsoPrecision !== undefined)
+        dateIsoOptions.push(`precision: ${dateIsoPrecision}`)
+      if (dateIsoOptions.length > 0)
+        optionsString = `{${dateIsoOptions.join(',')}}`
+
+      string.push(`datetime(${optionsString})`)
+      return string.join('.')
+    }
+
+    return string.join('.') // default string with no date params
+  }
+
   switch (type) {
     case 'date':
+      return generateDate(type)
     case 'datetime':
+      return generateDateTime(type)
     case 'timestamp':
+      return generateDateTime(type)
     case 'time':
+      return generateDateTime(type)
     case 'year':
+      return generateYear(type)
     case 'char':
     case 'varchar':
     case 'tinytext':
@@ -60,9 +155,9 @@ export async function generate(config: Config) {
   const db = knex({
     client: 'mysql2',
     connection: {
-      host    : config.host,
-      port    : config.port,
-      user    : config.user,
+      host: config.host,
+      port: config.port,
+      user: config.user,
       password: config.password,
       database: config.database,
     },
@@ -171,7 +266,7 @@ export const ${typeName} = z.object({`
 
 export type ${camelCaseText(`${typeName}Type`)} = z.infer<typeof ${typeName}>
 `
-    const dir  = (config.folder && config.folder !== '') ? config.folder : '.'
+    const dir = (config.folder && config.folder !== '') ? config.folder : '.'
     const file = (config.suffix && config.suffix !== '') ? `${typeName}.${config.suffix}.ts` : `${typeName}.ts`
     const dest = path.join(dir, file)
     console.log('Created:', dest)
@@ -199,5 +294,15 @@ export interface Config {
   camelCase?: boolean | camelCaseOptions
   nullish?: boolean
   requiredString?: boolean
-  modify?: string[][]
+  modify?: string[][],
+  datetime?: {
+    useDate?: boolean,
+    useIso?: boolean,
+    coerce?: boolean,
+    offset?: boolean,
+    precision?: number,
+    minDate?: string,
+    maxDate?: string,
+    year?: string
+  }
 }
